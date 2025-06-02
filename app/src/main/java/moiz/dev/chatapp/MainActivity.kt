@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var databaseReference: DatabaseReference
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private val currentUserId = FirebaseAuth.getInstance().uid ?: "123"
-
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -76,8 +76,13 @@ class MainActivity : AppCompatActivity() {
 
             }
         })
-
-
+        binding.logoutBtn.setOnClickListener {
+            databaseReference.child("users").child(currentUserId).child("isOnline").setValue(false)
+            auth.signOut()
+            Utils.showToast(this, "User Logged out")
+            startActivity(Intent(this, SignIn::class.java))
+            finish()
+        }
     }
 
     override fun onResume() {

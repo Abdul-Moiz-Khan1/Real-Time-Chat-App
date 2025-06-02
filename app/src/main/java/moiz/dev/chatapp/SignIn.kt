@@ -27,14 +27,14 @@ class SignIn : AppCompatActivity() {
     private val RC_SIGN_IN = 1001
     private lateinit var auth: FirebaseAuth
     private lateinit var dbRef: DatabaseReference
+    private lateinit var binding: ActivitySignInBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val binding = ActivitySignInBinding.inflate(layoutInflater)
+        binding = ActivitySignInBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true)
         auth = FirebaseAuth.getInstance()
         dbRef = FirebaseDatabase.getInstance().reference.child("users")
 
@@ -45,8 +45,26 @@ class SignIn : AppCompatActivity() {
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
+
+
+        binding.SignInbutton.setOnClickListener {
+            if (binding.email.text.isNullOrEmpty() || binding.editTextTextPassword.text.isNullOrEmpty()) {
+                Utils.showToast(this, "Please enter email and password")
+            } else {
+                signinWithEmailPassword(
+                    binding.email.text.toString(),
+                    binding.editTextTextPassword.text.toString()
+                )
+
+            }
+        }
+
         binding.googleSignInBtn.setOnClickListener {
             signIn()
+        }
+
+        binding.gotoSignUp.setOnClickListener {
+            startActivity(Intent(this, NewUserSignIn::class.java))
         }
     }
 
@@ -73,7 +91,6 @@ class SignIn : AppCompatActivity() {
     }
 
     private fun firebaseAuthWithGoogle(idToken: String) {
-
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         auth.signInWithCredential(credential).addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
@@ -89,11 +106,36 @@ class SignIn : AppCompatActivity() {
                 startActivity(Intent(this, MainActivity::class.java))
                 finish()
             } else {
-                Toast.makeText(this, "Firebase authentication failed.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Firebase authentication failed.", Toast.LENGTH_SHORT)
+                    .show()
             }
-
         }
+    }
 
+    private fun signinWithEmailPassword(email: String, pass: String) {
+        auth.signInWithEmailAndPassword(
+            email, pass
+        ).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Utils.showToast(this, "Login Successful")
+                val user = auth.currentUser
+                val userData = User(
+                    user!!.uid,
+                    user.displayName?:user.email.toString().dropLast(10),
+                    user.email!!,
+                    Utils.convertToTimestamp(System.currentTimeMillis())
+                )
+                dbRef.child(user.uid).setValue(userData)
+                Utils.showToast(this, "Welcome User")
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            }
+        }.addOnFailureListener { e ->
+            Utils.showToast(this, "Login Failed${e.message.toString()}")
+        }
     }
 
 }
+
+
+
