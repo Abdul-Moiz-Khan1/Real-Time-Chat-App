@@ -3,10 +3,9 @@ package moiz.dev.chatapp.Model
 import android.net.Uri
 
 data class Message(
-    val message: String = "",
+    var message: String = "",
     val senderId: String = "",
     val timestamp: String = "",
-    val imageUri: String = "",
-    val videoUri: String = "",
-    val docuementUri: String = "",
+    val messageID:String = "",
+    val deleted:Boolean = false,
 )

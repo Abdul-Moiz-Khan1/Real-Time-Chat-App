@@ -29,8 +29,10 @@ class UserAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = itemView.findViewById(R.id.userNameText)
         val wholeView = itemView.findViewById<LinearLayout>(R.id.user_item_layout)
+        val lastSeen = itemView.findViewById<TextView>(R.id.lastSeen)
         fun bind(user: User) {
             nameText.text = user.name
+            lastSeen.text = user.lastSeen
             wholeView.setOnClickListener { onUserClick(user) }
         }
     }

@@ -7,6 +7,10 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -37,14 +41,6 @@ class ChatRoom : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var senderId: String
     private lateinit var receiverId: String
-
-    private val IMAGE_PICK_CODE = 1001
-    private val VIDEO_PICK_CODE = 1002
-    private val DOC_PICK_CODE = 1003
-
-    private var imageUri: Uri? = null
-    private var videoUri: Uri? = null
-    private var documentUri: Uri? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,11 +74,24 @@ class ChatRoom : AppCompatActivity() {
                     Log.e("online", "Failed to read online status", error.toException())
                 }
             })
+        database.child("users").child(receiverId).child("isTyping")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val isTyping = snapshot.getValue(Boolean::class.java) ?: false
+                    Log.d("typing", isTyping.toString())
+                    if (isTyping) {
+                        binding.typingStatus.visibility = View.VISIBLE
+                    } else {
+                        binding.typingStatus.visibility = View.INVISIBLE
+                    }
+                }
 
-
+                override fun onCancelled(error: DatabaseError) {
+                    TODO("Not yet implemented")
+                }
+            })
 
         binding.chatRoomUserName.text = username
-
 
         // ✅ 2. Define chat rooms
         senderRoom = senderId + receiverId
@@ -90,7 +99,8 @@ class ChatRoom : AppCompatActivity() {
 
         // ✅ 3. Set up RecyclerView and Adapter
         messageList = ArrayList()
-        messageAdapter = MessageAdapter(this, messageList, senderId)
+        messageAdapter =
+            MessageAdapter(this, messageList, senderId, senderRoom, receiverRoom, database)
         binding.chatRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.chatRecyclerView.adapter = messageAdapter
 
@@ -103,8 +113,19 @@ class ChatRoom : AppCompatActivity() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     messageList.clear()
                     for (msgSnapshot in snapshot.children) {
-                        val message = msgSnapshot.getValue(Message::class.java)
-                        message?.let { messageList.add(it) }
+                        if (msgSnapshot.value is Map<*, *>) {
+                            val message = msgSnapshot.getValue(Message::class.java)
+                            message?.let {
+                                messageList.add(it)
+                            }
+
+
+                        } else {
+                            Log.w(
+                                "InvalidMessageNode",
+                                "Skipped non-message data: ${msgSnapshot.value}"
+                            )
+                        }
                     }
                     messageAdapter.notifyDataSetChanged()
                     binding.chatRecyclerView.scrollToPosition(messageList.size - 1)
@@ -124,66 +145,59 @@ class ChatRoom : AppCompatActivity() {
             Log.d("chk reach", "in send button")
             Toast.makeText(this, "in send button", Toast.LENGTH_SHORT).show()
             val messageText = binding.messageEditText.text.toString().trim()
+            val messageKey =
+                database.child("chats").child(senderRoom).child("messages").push().key!!
+
             if (messageText.isNotEmpty()) {
                 val message =
                     Message(
                         messageText,
                         senderId,
                         Utils.convertToTimestamp(System.currentTimeMillis()),
-                        imageUri.toString(),
-                        videoUri.toString(),
-                        documentUri.toString()
+                        messageID = messageKey,
                     )
-                database.child("chats").child(senderRoom).child("messages")
-                    .push().setValue(message)
+                database.child("chats").child(senderRoom).child("messages").child(messageKey)
+                    .setValue(message)
                     .addOnSuccessListener {
+                        Log.d("msgkey", messageKey)
                         database.child("chats").child(receiverRoom).child("messages")
-                            .push().setValue(message)
+                            .child(messageKey)
+                            .setValue(message)
                     }
                 binding.messageEditText.setText("")
             }
         }
 
-        binding.selectFiles.setOnClickListener {
-            requestPermissionsofMedia(this)
-            binding.filesSelector.visibility = View.VISIBLE
-        }
-        binding.chatRecyclerView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN && binding.filesSelector.visibility == View.VISIBLE) {
-                binding.filesSelector.visibility = View.GONE
+        binding.messageEditText.addTextChangedListener(object : TextWatcher {
+            val looper = Handler(Looper.getMainLooper())
+            val stoppedTypingRunable = Runnable { setTypingStatus(false) }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
             }
-            false
-        }
 
-        binding.selectImages.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK)
-            intent.type = "image/*"
-            startActivityForResult(intent, IMAGE_PICK_CODE)
-        }
-        binding.selectVideos.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK)
-            intent.type = "video/*"
-            startActivityForResult(intent, VIDEO_PICK_CODE)
-        }
-        binding.selectDocuments.setOnClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT)
-            intent.type = "*/*"
-            val mimeTypes = arrayOf(
-                "application/pdf",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
-                "text/plain"
-            )
-            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes)
-            startActivityForResult(intent, DOC_PICK_CODE)
-        }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                setTypingStatus(true)
+                looper.removeCallbacks(stoppedTypingRunable)
+                looper.postDelayed(stoppedTypingRunable, 1000)
+            }
 
+            override fun afterTextChanged(s: Editable?) {
+            }
+        })
+
+
+    }
+
+    private fun setTypingStatus(state: Boolean) {
+        senderId.let {
+            database.child("users").child(it).child("isTyping").setValue(state)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         senderId.let {
             database.child("users").child(it).child("isOnline").setValue(true)
+
         }
     }
 
@@ -192,58 +206,11 @@ class ChatRoom : AppCompatActivity() {
         senderId.let {
             database.child("users").child(it).child("isOnline").setValue(false)
         }
+        senderId.let {
+            database.child("users").child(it).child("lastSeen")
+                .setValue(Utils.convertToTimestamp(System.currentTimeMillis()))
+        }
+
+
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (resultCode == RESULT_OK && data != null) {
-            val fileUri = data.data
-            when (requestCode) {
-                IMAGE_PICK_CODE -> {
-                    imageUri = fileUri
-                }
-
-                VIDEO_PICK_CODE -> {
-                    videoUri = fileUri
-                }
-
-                DOC_PICK_CODE -> {
-                    documentUri = fileUri
-                }
-            }
-        }
-    }
-
-
-}
-
-private fun requestPermissionsofMedia(context: android.content.Context) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val permissions = mutableListOf<String>()
-
-        if (ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_MEDIA_IMAGES
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions.add(android.Manifest.permission.READ_MEDIA_IMAGES)
-        }
-        if (ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_MEDIA_VIDEO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissions.add(android.Manifest.permission.READ_MEDIA_VIDEO)
-        }
-
-        if (permissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                context as Activity,
-                permissions.toTypedArray(),
-                101
-            )
-        }
-    }
-
 }

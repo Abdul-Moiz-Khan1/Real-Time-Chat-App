@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/deleteForMe"
+        android:title="Delete for Me"
+        />
+
+    <item
+        android:id="@+id/deleteForEveryone"
+        android:title="Delete for Everyone"
+
+        />
+</menu>

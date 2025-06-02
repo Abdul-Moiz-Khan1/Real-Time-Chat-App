@@ -48,11 +48,9 @@ class SignIn : AppCompatActivity() {
         binding.googleSignInBtn.setOnClickListener {
             signIn()
         }
-
     }
 
     private fun signIn() {
-
         val signInIntent = googleSignInClient.signInIntent
         startActivityForResult(signInIntent, RC_SIGN_IN)
     }
@@ -80,7 +78,12 @@ class SignIn : AppCompatActivity() {
         auth.signInWithCredential(credential).addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
                 val user = auth.currentUser
-                val userData = User(user!!.uid, user.displayName!!, user.email!!)
+                val userData = User(
+                    user!!.uid,
+                    user.displayName!!,
+                    user.email!!,
+                    Utils.convertToTimestamp(System.currentTimeMillis())
+                )
                 dbRef.child(user.uid).setValue(userData)
                 Toast.makeText(this, "Welcome User", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this, MainActivity::class.java))

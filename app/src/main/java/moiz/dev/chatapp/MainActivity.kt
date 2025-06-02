@@ -28,14 +28,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userAdapter: UserAdapter
     private lateinit var databaseReference: DatabaseReference
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private val currentUserId = FirebaseAuth.getInstance().uid ?: "123"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-
 
         requestPermissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -47,7 +46,6 @@ class MainActivity : AppCompatActivity() {
             }
         requestNotificationPermission()
 
-        val currentUserId = FirebaseAuth.getInstance().uid ?: "123"
         usersList = ArrayList()
         userAdapter = UserAdapter(this, usersList, currentUserId) { user ->
             val intent = Intent(this, ChatRoom::class.java)
@@ -55,8 +53,6 @@ class MainActivity : AppCompatActivity() {
             intent.putExtra("username", user.name)
             startActivity(intent)
         }
-
-
 
         binding.recyclerViewUsers.layoutManager = LinearLayoutManager(this)
         binding.recyclerViewUsers.adapter = userAdapter
