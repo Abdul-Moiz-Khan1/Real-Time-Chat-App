@@ -134,7 +134,14 @@ class SignIn : AppCompatActivity() {
             Utils.showToast(this, "Login Failed${e.message.toString()}")
         }
     }
-
+    override fun onStart() {
+        super.onStart()
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        }
+    }
 }
 
 
