@@ -20,14 +20,14 @@ class SplashScreen : AppCompatActivity() {
         FirebaseDatabase.getInstance().setPersistenceEnabled(true)
 
         ObjectAnimator.ofFloat(binding.splashText, "alpha", 0f, 1f).apply {
-            this.duration = 1500
+            this.duration = 2000
             this.start()
         }
 
         Handler(Looper.getMainLooper()).postDelayed({
             startActivity(Intent(this, SignIn::class.java))
             finish()
-        }, 1500)
+        }, 2000)
 
     }
 }

@@ -50,6 +50,7 @@
                 android:layout_weight="1"
                 android:background="@null"
                 android:src="@drawable/logout" />
+
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 

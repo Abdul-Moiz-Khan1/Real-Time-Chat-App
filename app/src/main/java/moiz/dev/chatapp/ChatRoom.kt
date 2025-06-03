@@ -29,6 +29,8 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import moiz.dev.chatapp.Adapters.MessageAdapter
 import moiz.dev.chatapp.Model.Message
+import moiz.dev.chatapp.Model.NotificationModel
+import moiz.dev.chatapp.Model.User
 import moiz.dev.chatapp.databinding.ActivityChatRoomBinding
 
 class ChatRoom : AppCompatActivity() {
@@ -42,19 +44,38 @@ class ChatRoom : AppCompatActivity() {
     private lateinit var senderId: String
     private lateinit var receiverId: String
 
+
+    private var ownUserName: String = "temp"
+
+    private lateinit var binding: ActivityChatRoomBinding
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val binding = ActivityChatRoomBinding.inflate(layoutInflater)
+        binding = ActivityChatRoomBinding.inflate(layoutInflater)
         setContentView(binding.root)
         FirebaseApp.initializeApp(this)
+        senderId = intent.getStringExtra("receiverId") ?: ""
+        if (senderId.isEmpty()) {
+            Toast.makeText(this, "Receiver ID is missing", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-        senderId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         receiverId = intent.getStringExtra("receiverId") ?: return
         val username = intent.getStringExtra("username") ?: return
 
+        senderId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        Log.d("recIDthroughitnt", receiverId)
+        Log.d("senderrecID", senderId)
+
         database = FirebaseDatabase.getInstance().reference
+
+        getUserName { name ->
+            ownUserName = name.toString()
+        }
 
         database.child("users").child(receiverId).child("isOnline")
             .addValueEventListener(object : ValueEventListener {
@@ -95,6 +116,7 @@ class ChatRoom : AppCompatActivity() {
 
         // ✅ 2. Define chat rooms
         senderRoom = senderId + receiverId
+        Log.d("room", senderRoom)
         receiverRoom = receiverId + senderId
 
         // ✅ 3. Set up RecyclerView and Adapter
@@ -111,6 +133,7 @@ class ChatRoom : AppCompatActivity() {
             .addValueEventListener(object : ValueEventListener {
                 @SuppressLint("NotifyDataSetChanged")
                 override fun onDataChange(snapshot: DataSnapshot) {
+                    Log.d("where", "inChats,senderroom,messages...")
                     messageList.clear()
                     for (msgSnapshot in snapshot.children) {
                         if (msgSnapshot.value is Map<*, *>) {
@@ -142,30 +165,7 @@ class ChatRoom : AppCompatActivity() {
 
         // ✅ 5. Send message
         binding.sendButton.setOnClickListener {
-            Log.d("chk reach", "in send button")
-            Toast.makeText(this, "in send button", Toast.LENGTH_SHORT).show()
-            val messageText = binding.messageEditText.text.toString().trim()
-            val messageKey =
-                database.child("chats").child(senderRoom).child("messages").push().key!!
-
-            if (messageText.isNotEmpty()) {
-                val message =
-                    Message(
-                        messageText,
-                        senderId,
-                        Utils.convertToTimestamp(System.currentTimeMillis()),
-                        messageID = messageKey,
-                    )
-                database.child("chats").child(senderRoom).child("messages").child(messageKey)
-                    .setValue(message)
-                    .addOnSuccessListener {
-                        Log.d("msgkey", messageKey)
-                        database.child("chats").child(receiverRoom).child("messages")
-                            .child(messageKey)
-                            .setValue(message)
-                    }
-                binding.messageEditText.setText("")
-            }
+            sendMessage()
         }
 
         binding.messageEditText.addTextChangedListener(object : TextWatcher {
@@ -187,6 +187,65 @@ class ChatRoom : AppCompatActivity() {
 
     }
 
+    private fun getUserName(callback: (String?) -> Unit) {
+        database.child("users").child(senderId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val user2 = snapshot.getValue(User::class.java)
+                    val name = user2?.name
+                    Log.d("username", name.toString())
+                    callback(name)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseError", error.message)
+                    callback(null)
+                }
+            })
+    }
+
+    private fun sendNotificationToFirebase(notification: NotificationModel) {
+        database.child("notifications").child(senderId).setValue(notification)
+            .addOnSuccessListener {
+                Utils.showToast(this, "Notification pushed to firebase")
+            }.addOnFailureListener { e ->
+                Utils.showToast(this, "Unable to push to firebase")
+                Log.d("customNotificationsWHILESENDINGNOTIF", e.message.toString())
+            }
+    }
+
+    private fun sendMessage() {
+        Log.d("chk reach", "in send button")
+        Toast.makeText(this, "in send button", Toast.LENGTH_SHORT).show()
+        val messageText = binding.messageEditText.text.toString().trim()
+        val messageKey =
+            database.child("chats").child(senderRoom).child("messages").push().key!!
+
+        if (messageText.isNotEmpty()) {
+            val message =
+                Message(
+                    messageText,
+                    senderId,
+                    Utils.convertToTimestamp(System.currentTimeMillis()),
+                    messageID = messageKey,
+                )
+            database.child("chats").child(senderRoom).child("messages").child(messageKey)
+                .setValue(message)
+                .addOnSuccessListener {
+                    Log.d("msgkey", messageKey)
+                    database.child("chats").child(receiverRoom).child("messages")
+                        .child(messageKey)
+                        .setValue(message)
+                }
+            val newNotification =
+                NotificationModel(ownUserName, senderId, message.message, senderId)
+            Log.d("customNotificationsBeforeSenidng", newNotification.toString())
+            Log.d("notificaionwaliid", senderId)
+            sendNotificationToFirebase(newNotification)
+            binding.messageEditText.setText("")
+        }
+    }
+
     private fun setTypingStatus(state: Boolean) {
         senderId.let {
             database.child("users").child(it).child("isTyping").setValue(state)
@@ -195,22 +254,17 @@ class ChatRoom : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        senderId.let {
-            database.child("users").child(it).child("isOnline").setValue(true)
-
+        if (::senderId.isInitialized) {
+            database.child("users").child(senderId).child("isOnline").setValue(true)
         }
     }
 
     override fun onPause() {
         super.onPause()
-        senderId.let {
-            database.child("users").child(it).child("isOnline").setValue(false)
-        }
-        senderId.let {
-            database.child("users").child(it).child("lastSeen")
+        if (::senderId.isInitialized) {
+            database.child("users").child(senderId).child("isOnline").setValue(false)
+            database.child("users").child(senderId).child("lastSeen")
                 .setValue(Utils.convertToTimestamp(System.currentTimeMillis()))
         }
-
-
     }
 }
