@@ -42,21 +42,14 @@ class MainActivity : AppCompatActivity() {
     private val currentUserId = FirebaseAuth.getInstance().uid ?: "123"
     private var recieverId = "temp"
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        requestPermissionLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-                if (isGranted) {
-                    Utils.showToast(this, "Notification permission allowed")
-                } else {
-                    Utils.showToast(this, "Notification permission denied")
-                }
-            }
-        requestNotificationPermission()
+        getPermissions()
 
         usersList = ArrayList()
         userAdapter = UserAdapter(this, usersList, currentUserId) { user ->
@@ -70,6 +63,45 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerViewUsers.adapter = userAdapter
         databaseReference = FirebaseDatabase.getInstance().reference
 
+        getUsersList()
+
+        getNotificationOrNot()
+
+        binding.logoutBtn.setOnClickListener {
+            databaseReference.child("users").child(currentUserId).child("isOnline").setValue(false)
+            auth.signOut()
+            Utils.showToast(this, "User Logged out")
+            startActivity(Intent(this, SignIn::class.java))
+            finish()
+        }
+    }
+
+    private fun getPermissions() {
+        requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    Utils.showToast(this, "Notification permission allowed")
+                } else {
+                    Utils.showToast(this, "Notification permission denied")
+                }
+            }
+        requestNotificationPermission()
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+
+    private fun getUsersList() {
         databaseReference.child("users").addValueEventListener(object :
             ValueEventListener {
             @SuppressLint("NotifyDataSetChanged")
@@ -89,7 +121,9 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+    }
 
+    private fun getNotificationOrNot() {
         databaseReference.child("notifications").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 for (notification in snapshot.children) {
@@ -98,43 +132,63 @@ class MainActivity : AppCompatActivity() {
                         notification.getValue(NotificationModel::class.java).toString()
                     )
                     val newNotification = notification.getValue(NotificationModel::class.java)!!
-                    recieverId = newNotification.recieverId
+                    recieverId = newNotification.senderId
                     var isViewed = false
                     databaseReference.child("notifications").child(newNotification.senderId)
                         .child("isViewed").get().addOnSuccessListener { snapshot ->
                             isViewed = snapshot.getValue(Boolean::class.java) ?: false
                             Log.d("isViewed", isViewed.toString())
+                            if(currentUserId == newNotification.recieverId && isViewed==false){
+                                showNotification(this@MainActivity , newNotification)
+                            }
                         }
-                    if (newNotification.senderId == currentUserId) {
-                        Log.d("isViewedcontinuty", isViewed.toString())
-                        continue
-                    } else if (isViewed) {
-                        Log.d("isViewedINCONDITION", isViewed.toString())
-                        continue
-                    } else {
-                        Log.d("isViewedELSEWISE", isViewed.toString())
-                        showNotification(
-                            this@MainActivity, newNotification
-                        )
-                        databaseReference.child("notifications").child(newNotification.senderId)
-                            .child("isViewed").setValue(true)
 
-                    }
                 }
             }
-
             override fun onCancelled(error: DatabaseError) {
                 TODO("Not yet implemented")
             }
         })
+    }
 
-        binding.logoutBtn.setOnClickListener {
-            databaseReference.child("users").child(currentUserId).child("isOnline").setValue(false)
-            auth.signOut()
-            Utils.showToast(this, "User Logged out")
-            startActivity(Intent(this, SignIn::class.java))
-            finish()
+
+    fun showNotification(context: Context, notification: NotificationModel) {
+        Log.d("customNotifications", "in notif funcshhhhh${notification.body}")
+        val channelId = "default_channel_id"
+        val channelName = "Default Channel"
+
+        databaseReference.child("notifications").child(notification.senderId)
+            .child("isViewed").setValue(true)
+
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(channelId, channelName, importance)
+            notificationManager.createNotificationChannel(channel)
         }
+
+        val intent = Intent(context, ChatRoom::class.java).apply {
+            putExtra("receiverId", notification.senderId)
+            putExtra("username", notification.username)
+            Log.d("recIDfromnotification", recieverId)
+        }
+
+        val pendingIntent = TaskStackBuilder.create(context).run {
+            addNextIntentWithParentStack(Intent(context, MainActivity::class.java))
+            addNextIntent(intent)
+            getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.app_logo)
+            .setContentTitle(notification.username)
+            .setContentText(notification.body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true).setContentIntent(pendingIntent)
+
+        notificationManager.notify(1, builder.build())
     }
 
     override fun onResume() {
@@ -150,57 +204,6 @@ class MainActivity : AppCompatActivity() {
         FirebaseAuth.getInstance().uid?.let {
             databaseReference.child("users").child(it).child("isOnline").setValue(false)
         }
-    }
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
-
-    fun showNotification(context: Context, notification: NotificationModel) {
-        Log.d("customNotifications", "in notif funcshhhhh${notification.body}")
-        val channelId = "default_channel_id"
-        val channelName = "Default Channel"
-
-        val notificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // For Android 8.0+ (Oreo), create a notification channel
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(channelId, channelName, importance)
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val intent = Intent(context, ChatRoom::class.java).apply {
-            putExtra("receiverId", notification.senderId)
-            putExtra("username", notification.username)
-            Log.d("recIDfromnotification", recieverId)
-            }
-
-        val pendingIntent = TaskStackBuilder.create(context).run {
-            // Add the back stack: MainActivity → ChatRoom
-            addNextIntentWithParentStack(Intent(context, MainActivity::class.java))
-            addNextIntent(intent)
-            getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        }
-
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.app_logo) // Replace with your icon
-            .setContentTitle(notification.username) // First string
-            .setContentText(notification.body) // Second string
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true).setContentIntent(pendingIntent)
-
-        // Show the notification
-        notificationManager.notify(1, builder.build())
     }
 }
 

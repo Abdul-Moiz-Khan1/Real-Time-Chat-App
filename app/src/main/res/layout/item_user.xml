@@ -31,8 +31,7 @@
         <TextView
             android:id="@+id/lastSeen"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TextView" />
+            android:layout_height="wrap_content" />
 
         <View
             android:id="@+id/divider"

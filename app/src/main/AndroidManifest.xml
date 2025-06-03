@@ -29,7 +29,9 @@
             android:exported="false" />
         <activity
             android:name=".ChatRoom"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            />
         <activity
             android:name=".SignIn"
             android:exported="false"/>

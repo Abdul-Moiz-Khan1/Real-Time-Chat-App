@@ -1,6 +1,7 @@
 package moiz.dev.chatapp.Adapters
 
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -32,7 +33,7 @@ class UserAdapter(
         val lastSeen = itemView.findViewById<TextView>(R.id.lastSeen)
         fun bind(user: User) {
             nameText.text = user.name
-            lastSeen.text = user.lastSeen
+            lastSeen.text = "Last Seen:${user.lastSeen}"
             wholeView.setOnClickListener { onUserClick(user) }
         }
     }

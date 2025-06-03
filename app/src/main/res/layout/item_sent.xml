@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="end"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:padding="2dp">
 
     <androidx.cardview.widget.CardView
@@ -22,7 +22,7 @@
             <TextView
                 android:id="@+id/sentMessageText"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:background="@color/lightyellow"
                 android:gravity="start"
                 android:maxWidth="250dp"
@@ -39,8 +39,15 @@
                 android:paddingEnd="3dp"
                 android:text="TextView"
                 android:textSize="8sp" />
+
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>
+
+    <ImageView
+        android:id="@+id/imageView3"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:src="@drawable/baseline_person_pin_24" />
 
 </LinearLayout>

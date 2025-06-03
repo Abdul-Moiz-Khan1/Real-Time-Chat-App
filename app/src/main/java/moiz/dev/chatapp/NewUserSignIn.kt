@@ -30,7 +30,6 @@ class NewUserSignIn : AppCompatActivity() {
             } else {
                 Utils.showToast(this, "Invalid Email or Password")
             }
-
         }
 
         binding.gotoLogIn.setOnClickListener {
@@ -44,6 +43,8 @@ class NewUserSignIn : AppCompatActivity() {
         auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Utils.showToast(this, "User Added Successfully")
+                FirebaseAuth.getInstance().signOut()
+
                 finish()
             } else {
                 Utils.showToast(this, "User Not Added")
