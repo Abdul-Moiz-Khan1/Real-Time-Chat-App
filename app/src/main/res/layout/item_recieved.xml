@@ -44,6 +44,7 @@
                 android:paddingBottom="3dp"
                 android:text="TextView"
                 android:textSize="8sp" />
+
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>

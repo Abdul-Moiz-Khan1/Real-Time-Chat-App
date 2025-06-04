@@ -3,9 +3,11 @@ package moiz.dev.chatapp.Adapters
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.Image
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -31,10 +33,17 @@ class UserAdapter(
         val nameText: TextView = itemView.findViewById(R.id.userNameText)
         val wholeView = itemView.findViewById<LinearLayout>(R.id.user_item_layout)
         val lastSeen = itemView.findViewById<TextView>(R.id.lastSeen)
+        val messageindicator = itemView.findViewById<ImageView>(R.id.newMessaegeIndicaor)
         fun bind(user: User) {
             nameText.text = user.name
             lastSeen.text = "Last Seen:${user.lastSeen}"
-            wholeView.setOnClickListener { onUserClick(user) }
+            messageindicator.visibility = if (user.hasUnreadMessage) View.VISIBLE else View.GONE
+            wholeView.setOnClickListener { onUserClick(user)
+                if (user.hasUnreadMessage) {
+                    user.hasUnreadMessage = false
+                    messageindicator.visibility = View.GONE
+                }
+            }
         }
     }
 
@@ -44,5 +53,13 @@ class UserAdapter(
 
     override fun getItemCount(): Int {
         return userList.size
+    }
+
+    fun setUserHasUnreadMessage(userId: String, hasUnread: Boolean) {
+        val user = userList.find { it.uid == userId }
+        user?.let {
+            it.hasUnreadMessage = hasUnread
+            notifyItemChanged(userList.indexOf(it))
+        }
     }
 }

@@ -4,5 +4,6 @@ data class User(
     val uid: String = "",
     val name: String = "",
     val email: String = "",
-    val lastSeen: String = ""
+    val lastSeen: String = "",
+    var hasUnreadMessage: Boolean = false
 )

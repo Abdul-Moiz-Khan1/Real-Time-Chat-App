@@ -19,6 +19,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.MainScope
 import moiz.dev.chatapp.Model.User
+import moiz.dev.chatapp.Utils.Utils
 import moiz.dev.chatapp.databinding.ActivitySignInBinding
 
 class SignIn : AppCompatActivity() {
@@ -99,7 +100,8 @@ class SignIn : AppCompatActivity() {
                     user!!.uid,
                     user.displayName!!,
                     user.email!!,
-                    Utils.convertToTimestamp(System.currentTimeMillis())
+                    Utils.convertToTimestamp(System.currentTimeMillis()),
+                    hasUnreadMessage = false
                 )
                 dbRef.child(user.uid).setValue(userData)
                 Toast.makeText(this, "Welcome User", Toast.LENGTH_SHORT).show()

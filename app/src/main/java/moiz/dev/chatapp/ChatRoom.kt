@@ -2,6 +2,11 @@ package moiz.dev.chatapp
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.TaskStackBuilder
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -18,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.FirebaseApp
@@ -28,9 +34,12 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import moiz.dev.chatapp.Adapters.MessageAdapter
+import moiz.dev.chatapp.MainActivity
 import moiz.dev.chatapp.Model.Message
 import moiz.dev.chatapp.Model.NotificationModel
 import moiz.dev.chatapp.Model.User
+import moiz.dev.chatapp.Utils.DeliveryStatus
+import moiz.dev.chatapp.Utils.Utils
 import moiz.dev.chatapp.databinding.ActivityChatRoomBinding
 
 class ChatRoom : AppCompatActivity() {
@@ -42,6 +51,7 @@ class ChatRoom : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var senderId: String
     private lateinit var receiverId: String
+    private var messageListener: ValueEventListener? = null
 
     private var ownUserName: String = "temp"
 
@@ -54,6 +64,7 @@ class ChatRoom : AppCompatActivity() {
         binding = ActivityChatRoomBinding.inflate(layoutInflater)
         setContentView(binding.root)
         FirebaseApp.initializeApp(this)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.lightyellow)
         senderId = intent.getStringExtra("receiverId") ?: ""
         if (senderId.isEmpty()) {
             Toast.makeText(this, "Receiver ID is missing", Toast.LENGTH_SHORT).show()
@@ -83,9 +94,9 @@ class ChatRoom : AppCompatActivity() {
         receiverRoom = receiverId + senderId
 
 
-        Log.d("inchatNotification" , "sender ${senderId} , reciver ${receiverId}")
+        Log.d("inchatNotification", "sender ${senderId} , reciver ${receiverId}")
         if (senderId == receiverId) {
-            Log.d("inchatNotification??", "alreadyinSmaeChatNoNotification")
+            Log.d("inchatNotification??", "alreadyinSmaeChat--NoNotification")
             database.child("notifications").child(senderId).child("isViewed").setValue(true)
         }
 
@@ -125,37 +136,33 @@ class ChatRoom : AppCompatActivity() {
 
     private fun getMessages() {
         Log.d("chk reach", "after rec views")
-        database.child("chats").child(senderRoom).child("messages")
-            .addValueEventListener(object : ValueEventListener {
-                @SuppressLint("NotifyDataSetChanged")
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    Log.d("where", "inChats,senderroom,messages...")
-                    messageList.clear()
-                    for (msgSnapshot in snapshot.children) {
-                        if (msgSnapshot.value is Map<*, *>) {
-                            val message = msgSnapshot.getValue(Message::class.java)
-                            message?.let {
-                                messageList.add(it)
-                            }
 
-
-                        } else {
-                            Log.w(
-                                "InvalidMessageNode",
-                                "Skipped non-message data: ${msgSnapshot.value}"
-                            )
+        messageListener = object : ValueEventListener {
+            @SuppressLint("NotifyDataSetChanged")
+            override fun onDataChange(snapshot: DataSnapshot) {
+                Log.d("where", "inChats,senderroom,messages...")
+                messageList.clear()
+                for (msgSnapshot in snapshot.children) {
+                    if (msgSnapshot.value is Map<*, *>) {
+                        val message = msgSnapshot.getValue(Message::class.java)
+                        message?.let {
+                            messageList.add(it)
                         }
                     }
-                    messageAdapter.notifyDataSetChanged()
-                    binding.chatRecyclerView.scrollToPosition(messageList.size - 1)
                 }
+                messageAdapter.notifyDataSetChanged()
+                binding.chatRecyclerView.scrollToPosition(messageList.size - 1)
+            }
 
-                override fun onCancelled(error: DatabaseError) {
-                    Log.d("chk reach", "in on cancel ${error.message}")
-                }
-            })
+            override fun onCancelled(error: DatabaseError) {
+                Log.d("chk reach", "in on cancel ${error.message}")
+            }
+        }
 
+        database.child("chats").child(senderRoom).child("messages")
+            .addValueEventListener(messageListener!!)
     }
+
 
     private fun getTypingStatus() {
         database.child("users").child(receiverId).child("isTyping")
@@ -277,4 +284,13 @@ class ChatRoom : AppCompatActivity() {
                 .setValue(Utils.convertToTimestamp(System.currentTimeMillis()))
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        messageListener?.let {
+            database.child("chats").child(senderRoom).child("messages")
+                .removeEventListener(it)
+        }
+    }
+
 }

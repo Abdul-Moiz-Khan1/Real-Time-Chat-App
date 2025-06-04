@@ -1,7 +1,6 @@
 package moiz.dev.chatapp.Adapters
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -9,16 +8,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
-import android.widget.VideoView
 import androidx.cardview.widget.CardView
-import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import moiz.dev.chatapp.Model.Message
 import moiz.dev.chatapp.R
-import moiz.dev.chatapp.Utils
+import moiz.dev.chatapp.Utils.DeliveryStatus
+import moiz.dev.chatapp.Utils.Utils
 
 class MessageAdapter(
     private val context: Context,
@@ -45,14 +42,21 @@ class MessageAdapter(
         }
     }
 
-    override fun onBindViewHolder(
-        holder: RecyclerView.ViewHolder,
-        position: Int
-    ) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messageList[position]
         if (holder is SentViewHolder) {
-            holder.sentText.text = message.message
+            holder.sentText.text =
+                if (message.deleted) "This message is deleted" else message.message
             holder.sentTextTime.text = message.timestamp
+
+            Log.d("doubleTickChk", "${message.deliveryState} , message = ${message.message}")
+            if (message.deliveryState == DeliveryStatus.sent) {
+                holder.readReceipt.setImageResource(R.drawable.single_tick)
+                Log.d("doubleTickChk", "false")
+            } else if (message.deliveryState == DeliveryStatus.delivered) {
+                holder.readReceipt.setImageResource(R.drawable.double_tick)
+                Log.d("doubleTickChk", "true")
+            }
 
             holder.sentMsgViw.setOnLongClickListener {
                 val popup = PopupMenu(context, it)
@@ -74,16 +78,23 @@ class MessageAdapter(
                 popup.show()
                 true
             }
-            if (message.deleted) {
-                holder.sentText.text =
-                    "This message is deleted"
-            }
+
         } else if (holder is ReceivedViewHolder) {
-            holder.receivedText.text = message.message
+            holder.receivedText.text =
+                if (message.deleted) "This message is deleted" else message.message
             holder.receivedTextTime.text = message.timestamp
+
+            if (message.deliveryState != DeliveryStatus.delivered) {
+                FirebaseDatabase.getInstance().reference
+                    .child("chats").child(senderRoom).child("messages")
+                    .child(message.messageID).child("deliveryState")
+                    .setValue(DeliveryStatus.delivered)
+                FirebaseDatabase.getInstance().reference
+                    .child("chats").child(recieverRoom).child("messages")
+                    .child(message.messageID).child("deliveryState")
+                    .setValue(DeliveryStatus.delivered)
+            }
         }
-
-
     }
 
 
@@ -100,6 +111,7 @@ class MessageAdapter(
         val sentText: TextView = view.findViewById(R.id.sentMessageText)
         val sentTextTime: TextView = view.findViewById(R.id.msgtime)
         val sentMsgViw: CardView = view.findViewById(R.id.sentMessageView)
+        val readReceipt: ImageView = view.findViewById(R.id.deliveryImage)
     }
 
     inner class ReceivedViewHolder(view: View) : RecyclerView.ViewHolder(view) {

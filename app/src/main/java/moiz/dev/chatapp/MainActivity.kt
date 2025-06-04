@@ -31,6 +31,7 @@ import moiz.dev.chatapp.Adapters.UserAdapter
 import moiz.dev.chatapp.Model.Message
 import moiz.dev.chatapp.Model.NotificationModel
 import moiz.dev.chatapp.Model.User
+import moiz.dev.chatapp.Utils.Utils
 import moiz.dev.chatapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -42,6 +43,8 @@ class MainActivity : AppCompatActivity() {
     private val currentUserId = FirebaseAuth.getInstance().uid ?: "123"
     private var recieverId = "temp"
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val unreadStatusMap = mutableMapOf<String, Boolean>()
+    val notificationText: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +56,11 @@ class MainActivity : AppCompatActivity() {
 
         usersList = ArrayList()
         userAdapter = UserAdapter(this, usersList, currentUserId) { user ->
+
+            unreadStatusMap[user.uid] = false
+            user.hasUnreadMessage = false
+            userAdapter.notifyDataSetChanged()
+
             val intent = Intent(this, ChatRoom::class.java)
             intent.putExtra("receiverId", user.uid)
             intent.putExtra("username", user.name)
@@ -100,7 +108,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun getUsersList() {
         databaseReference.child("users").addValueEventListener(object :
             ValueEventListener {
@@ -110,6 +117,7 @@ class MainActivity : AppCompatActivity() {
                 for (userSnapshot in snapshot.children) {
                     val user = userSnapshot.getValue(User::class.java)
                     if (user != null && user.uid != currentUserId) {
+                        user.hasUnreadMessage = unreadStatusMap[user.uid] ?: false
                         usersList.add(user)
                     }
                 }
@@ -138,19 +146,27 @@ class MainActivity : AppCompatActivity() {
                         .child("isViewed").get().addOnSuccessListener { snapshot ->
                             isViewed = snapshot.getValue(Boolean::class.java) ?: false
                             Log.d("isViewed", isViewed.toString())
-                            if(currentUserId == newNotification.recieverId && isViewed==false){
-                                showNotification(this@MainActivity , newNotification)
+                            if (currentUserId == newNotification.recieverId && !isViewed) {
+                                Utils.showToast(
+                                    this@MainActivity,
+                                    "New message from ${newNotification.username}"
+                                )
+                                unreadStatusMap[newNotification.senderId] = true
+                                userAdapter.setUserHasUnreadMessage(newNotification.senderId, true)
+
+
+                                showNotification(this@MainActivity, newNotification)
                             }
                         }
 
                 }
             }
+
             override fun onCancelled(error: DatabaseError) {
                 TODO("Not yet implemented")
             }
         })
     }
-
 
     fun showNotification(context: Context, notification: NotificationModel) {
         Log.d("customNotifications", "in notif funcshhhhh${notification.body}")
@@ -164,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(channelId, channelName, importance)
             notificationManager.createNotificationChannel(channel)
         }
@@ -185,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             .setSmallIcon(R.drawable.app_logo)
             .setContentTitle(notification.username)
             .setContentText(notification.body)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true).setContentIntent(pendingIntent)
 
         notificationManager.notify(1, builder.build())
@@ -195,7 +211,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         FirebaseAuth.getInstance().uid?.let {
             databaseReference.child("users").child(it).child("isOnline").setValue(true)
+            databaseReference.child("users").child(it).child("lastSeen").setValue(
+                Utils.convertToTimestamp(
+                    System.currentTimeMillis()
+                )
+            )
         }
+
 
     }
 
