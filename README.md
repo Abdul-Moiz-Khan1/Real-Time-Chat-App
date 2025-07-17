@@ -45,28 +45,29 @@ This chat module allows users to:
 
 4. Push Notifications
 Notifications shows:
-
-    a. Sender name
-    b. Message snippet
-    c. Sound/vibration
-    d. Tapping a notification opens the specific chat screen.
+    
+        a. Sender name
+        b. Message snippet
+        c. Sound/vibration
+        d. Tapping a notification opens the specific chat screen.
 
 5. Message Management
 
-Long-press to delete messages:
-
-For yourself
-
-For both users (if sender)
-
-Updates propagate in real-time to all affected users.
+    Long-press to delete messages:
+    
+    For yourself
+    
+    For both users (if sender)
+    
+    Updates propagate in real-time to all affected users.
 
 6. UI/UX Highlights
-Clean, WhatsApp-style chat layout
-
-Left/right aligned message bubbles
-
-Timestamps under each message
+   
+    Clean, WhatsApp-style chat layout
+    
+    Left/right aligned message bubbles
+    
+    Timestamps under each message
 
 7. Typing indicators, Message delivered/read status
 
