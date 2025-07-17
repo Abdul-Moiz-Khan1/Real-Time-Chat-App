@@ -73,16 +73,16 @@ Notifications shows:
 
    
 # SignUp Screen
-<img width="695" height="1380" alt="chat_signup" src="https://github.com/user-attachments/assets/2276f715-4a7d-4b46-8e19-eb8c1007db6e" />
+<img width="250" height="500" alt="chat_signup" src="https://github.com/user-attachments/assets/2276f715-4a7d-4b46-8e19-eb8c1007db6e" />
 
 # SignIn Screen
-<img width="700" height="1389" alt="chat_signin" src="https://github.com/user-attachments/assets/491198bd-6ac7-4d1d-bb4e-42a8e8029e9c" />
+<img width="250" height="500" alt="chat_signin" src="https://github.com/user-attachments/assets/491198bd-6ac7-4d1d-bb4e-42a8e8029e9c" />
 
 # Chat Screen
-<img width="709" height="1375" alt="chat_chats" src="https://github.com/user-attachments/assets/0c9feaad-3c65-4700-8abf-a556b3bd4a02" />
+<img width="250" height="500" alt="chat_chats" src="https://github.com/user-attachments/assets/0c9feaad-3c65-4700-8abf-a556b3bd4a02" />
 
 # 1-to-1  chat Screen
-<img width="692" height="1384" alt="chat_chat" src="https://github.com/user-attachments/assets/30121753-391e-45a8-afac-8c4b8d60b824" />
+<img width="250" height="500" alt="chat_chat" src="https://github.com/user-attachments/assets/30121753-391e-45a8-afac-8c4b8d60b824" />
 
 
 
