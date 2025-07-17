@@ -71,6 +71,16 @@ Notifications shows:
 
 7. Typing indicators, Message delivered/read status
 
+<img width="1080" height="1920" alt="chat_signin" src="https://github.com/user-attachments/assets/5201b854-debd-401c-8580-c3eeb85a4e5b" />
+
+<img width="1080" height="1920" alt="chat_signup" src="https://github.com/user-attachments/assets/457a3210-315b-4059-aa0a-0193d6db5c37" />
+
+<img width="1080" height="1920" alt="chat_chats" src="https://github.com/user-attachments/assets/1656eebd-f768-4edc-ac96-c6c88ed54d39" />
+
+<img width="1080" height="1920" alt="chat_chat" src="https://github.com/user-attachments/assets/73add69f-c979-4966-bc46-582a03e2bcd3" />
+
+
+
 
 
 
