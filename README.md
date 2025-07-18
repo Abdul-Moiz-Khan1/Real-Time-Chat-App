@@ -72,26 +72,11 @@ Notifications shows:
 7. Typing indicators, Message delivered/read status
 
    
-# SignUp Screen
+# Showcase
 <p align="center">
-<img width="250" height="500" alt="chat_signup" src="https://github.com/user-attachments/assets/2276f715-4a7d-4b46-8e19-eb8c1007db6e" />
+    <img width="1024" height="768" alt="chat_app" src="https://github.com/user-attachments/assets/31a7e3b7-8060-474d-a70f-1f16c2995e9b" />
 </p>
 
-# SignIn Screen
-
-<p align="center">
-<img width="250" height="500" alt="chat_signin" src="https://github.com/user-attachments/assets/491198bd-6ac7-4d1d-bb4e-42a8e8029e9c" />
-</p>
-
-# Chat Screen
-<p align="center">
-<img width="250" height="500" alt="chat_chats" src="https://github.com/user-attachments/assets/0c9feaad-3c65-4700-8abf-a556b3bd4a02" />
-</p>
-
-# 1-to-1  chat Screen
-<p align="center">
-  <img width="250" height="500" alt="chat_chat" src="https://github.com/user-attachments/assets/30121753-391e-45a8-afac-8c4b8d60b824" />
-</p>
 
 
 
